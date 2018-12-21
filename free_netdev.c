@@ -64,6 +64,8 @@ static int on_netdev_refcnt_read_ent(const struct net_device *dev)
 
 DECL_CMN_JRP(netdev_refcnt_read);
 
+static bool fixed = false;
+
 static int on_netdev_refcnt_read_ret(struct kretprobe_instance *ri, struct pt_regs *regs)
 {
         struct per_cpu_net_data *data;
@@ -71,17 +73,21 @@ static int on_netdev_refcnt_read_ret(struct kretprobe_instance *ri, struct pt_re
 	int i, ret, refcnt = 0;
 
 	ret = (int)regs_return_value(regs);
-	if (ret != 0) {
+	if (ret != 0 && !fixed) {
         	data = &__get_cpu_var(per_cpu_net);
 		dev = data->dev;	
 		pr_warn("in ret dev->name: %s\n", dev->name);
-		for_each_possible_cpu(i) {
-			refcnt = *per_cpu_ptr(dev->pcpu_refcnt, i);
-			if (refcnt != 0) 
-				*per_cpu_ptr(dev->pcpu_refcnt, i) = 0;
-		}
+		if (strcmp(dev->name, "eth0") == 0) {
+			for_each_possible_cpu(i) {
+				refcnt = *per_cpu_ptr(dev->pcpu_refcnt, i);
+				if (refcnt != 0) 
+					*per_cpu_ptr(dev->pcpu_refcnt, i) = 0;
+			}
 
-		regs->ax = 0;
+			regs->ax = 0;
+			
+			fixed = true;
+		}
 	}
 
 	return 0;
