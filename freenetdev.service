@@ -1,0 +1,8 @@
+[Unit]
+Description=Free netdev
+
+[Service]
+ExecStart=/usr/local/bin/auto-free-netdev.sh
+
+[Install]
+WantedBy=multi-user.target
